@@ -155,18 +155,18 @@ unsigned
 npfctl_table_getid(const char *name)
 {
 	unsigned tid = (unsigned)-1;
+	nl_iter_t i = NPF_ITER_BEGIN;
 	nl_table_t *tl;
 
 	/* XXX dynamic ruleset */
 	if (!npf_conf) {
 		return (unsigned)-1;
 	}
-
-	/* XXX: Iterating all as we need to rewind for the next call. */
-	while ((tl = npf_table_iterate(npf_conf)) != NULL) {
+	while ((tl = npf_table_iterate(npf_conf, &i)) != NULL) {
 		const char *tname = npf_table_getname(tl);
 		if (strcmp(tname, name) == 0) {
 			tid = npf_table_getid(tl);
+			break;
 		}
 	}
 	return tid;
@@ -176,12 +176,13 @@ const char *
 npfctl_table_getname(nl_config_t *ncf, unsigned tid, bool *ifaddr)
 {
 	const char *name = NULL;
+	nl_iter_t i = NPF_ITER_BEGIN;
 	nl_table_t *tl;
 
-	/* XXX: Iterating all as we need to rewind for the next call. */
-	while ((tl = npf_table_iterate(ncf)) != NULL) {
+	while ((tl = npf_table_iterate(ncf, &i)) != NULL) {
 		if (npf_table_getid(tl) == tid) {
 			name = npf_table_getname(tl);
+			break;
 		}
 	}
 	if (!name) {
@@ -542,7 +543,8 @@ npfctl_build_maprset(const char *name, int attr, const char *ifname)
 	/* Allow only "in/out" attributes. */
 	attr = NPF_RULE_GROUP | NPF_RULE_DYNAMIC | (attr & attr_di);
 	rl = npf_rule_create(name, attr, ifname);
-	npf_nat_insert(npf_conf, rl, NPF_PRI_LAST);
+	npf_rule_setprio(rl, NPF_PRI_LAST);
+	npf_nat_insert(npf_conf, rl);
 }
 
 /*
@@ -825,10 +827,12 @@ npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
 	}
 
 	if (nt1) {
-		npf_nat_insert(npf_conf, nt1, NPF_PRI_LAST);
+		npf_rule_setprio(nt1, NPF_PRI_LAST);
+		npf_nat_insert(npf_conf, nt1);
 	}
 	if (nt2) {
-		npf_nat_insert(npf_conf, nt2, NPF_PRI_LAST);
+		npf_rule_setprio(nt2, NPF_PRI_LAST);
+		npf_nat_insert(npf_conf, nt2);
 	}
 }
 
@@ -922,8 +926,8 @@ npfctl_ifnet_table(const char *ifname)
 void
 npfctl_build_alg(const char *al_name)
 {
-	if (_npf_alg_load(npf_conf, al_name) != 0) {
-		errx(EXIT_FAILURE, "ALG '%s' already loaded", al_name);
+	if (npf_alg_load(npf_conf, al_name) != 0) {
+		yyerror("ALG '%s' is already loaded", al_name);
 	}
 }
 

@@ -32,8 +32,8 @@
  *
  * Warning (not applicable for the userspace npfkern):
  *
- *	The thmap data is partially lock-free data structure that uses its
- *	own spin-locks on the writer side (insert/delete operations).
+ *	thmap is partially lock-free data structure that uses its own
+ *	spin-locks on the writer side (insert/delete operations).
  *
  *	The relevant interrupt priority level (IPL) must be set and the
  *	kernel preemption disabled across the critical paths to prevent
